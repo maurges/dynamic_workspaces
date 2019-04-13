@@ -1,9 +1,6 @@
 [Desktop Entry]
-
 Name=Dynamic Workspaces
-
 Comment=Automatically adds and removes workspaces when windows move to empty ones
-
 Type=Service
 
 X-KDE-ServiceTypes=KWin/Script

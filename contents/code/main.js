@@ -1,14 +1,56 @@
-// tells if desktop with the number only has one client
-function has_one_window(number, client)
+function add_desktop()
 {
-	// as this is used for determining whether to delete the desktop, return
-	// false for first
-	if (number == 1)  return false;
+	workspace.desktops += 1;
+}
 
+// shifts a window to the left if it's more to the right than number
+function shift_righter_than(number)
+{
+	return function(client)
+	{
+		if (client.desktop > number) {
+			client.desktop -= 1;
+		}
+	}
+}
+
+// deletes last desktop without fanfare
+function delete_last()
+{
+	// don't do anything if last two remain
+	if (workspace.desktops <= 2)  return;
+	workspace.desktops -= 1;
+}
+
+// simulates deletion of desktop in the middle
+function delete_desktop(number)
+{
+	// don't do anything for last desktop
+	if (workspace.desktops == 1)  return;
+
+	if (workspace.desktops == 2) {
+		// don't delete, only shift left
+		workspace.clientList().forEach(shift_righter_than(number));
+		return;
+	}
+
+	if (number >= workspace.desktops - 1) {
+		// actually perform deletion
+		delete_last();
+		return;
+	}
+
+	// shift all windows and the last desktop will delete itself as per
+	// case above triggered by connections on desktopChanged
+	workspace.clientList().forEach(shift_righter_than(number));
+}
+
+// tells if desktop has no windows of its own
+function is_empty_desktop(number)
+{
 	var cls = workspace.clientList();
 	for (var i = 0; i < cls.length; ++i) {
 		if (cls[i].desktop == number
-			&& cls[i] != client
 			&& !cls[i].skipPager // don't count hidden windows
 		) {
 			print("Not empty: " + cls[i].caption + " is there");
@@ -18,8 +60,6 @@ function has_one_window(number, client)
 	return true;
 }
 
-function is_empty_desktop(number) { return has_one_window(number, null) }
-
 function is_last_empty()
 {
 	// -1 as we always have the last desktop that we keep empty for moving
@@ -27,26 +67,10 @@ function is_last_empty()
 	return is_empty_desktop(workspace.desktops - 1);
 }
 
-function last_has_one(client)
-{
-	return has_one_window(workspace.desktop - 1, client);
-}
-
-function add_desktop()
-{
-	workspace.desktops += 1;
-}
-
-function delete_desktop()
-{
-	if (workspace.desktops <= 2)  {print("didn't delete actually");return;}
-	workspace.desktops -= 1;
-}
-
 function delete_empty_last()
 {
 	if (is_last_empty()) {
-		delete_desktop();
+		delete_last();
 		print("deleted last desktop");
 	}
 }
@@ -71,19 +95,6 @@ function desktop_changed_for(client)
 	}
 }
 
-function window_closed(client)
-{
-	// don't do anything for hidden windows
-	if (client.skipPager)  return;
-	// don't do anything if window was not on last desktop
-	if (client.dekstop != workspace.desktops - 1)  return;
-
-	if (last_has_one(client)) {
-		delete_desktop();
-		// switch to previous desktop as this is empty now
-		workspace.currentDesktop -= 1;
-	}
-}
 
 function subscribe(client)
 {
@@ -91,7 +102,13 @@ function subscribe(client)
 		// don't subscribe to hidden windows
 		return;
 	}
-	print("Connected to " + client.caption);
+
+	// add a new desktop for a client too right
+	if (client.desktop >= workspace.desktops) {
+		add_desktop();
+	}
+
+	print("Connected to " + client.caption + " on workspace " + client.desktop);
 	client.desktopChanged.connect(desktop_changed_for(client));
 }
 
@@ -99,13 +116,8 @@ function subscribe(client)
 /*****  Main part *****/
 
 workspace.clientAdded.connect(subscribe);
-workspace.clientRemoved.connect(window_closed);
-
 // also subscribe all existing clients
-var clients = workspace.clientList();
-for (var i = 0; i < clients.length; ++i){
-	subscribe(clients[i]);
-}
+workspace.clientList().forEach(subscribe);
 
 // create an empty desktop to the right if doesn't exist
 if (workspace.desktops < 2 || !is_last_empty()) {

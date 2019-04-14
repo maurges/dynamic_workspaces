@@ -119,7 +119,4 @@ workspace.clientAdded.connect(subscribe);
 // also subscribe all existing clients
 workspace.clientList().forEach(subscribe);
 
-// create an empty desktop to the right if doesn't exist
-if (workspace.desktops < 2 || !is_last_empty()) {
-	add_desktop();
-}
+// TODO: create an empty desktop to the right if doesn't exist

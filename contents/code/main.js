@@ -7,7 +7,10 @@ function has_one_window(number, client)
 
 	var cls = workspace.clientList();
 	for (var i = 0; i < cls.length; ++i) {
-		if (cls[i].desktop == number && cls[i] != client) {
+		if (cls[i].desktop == number
+			&& cls[i] != client
+			&& !cls[i].skipPager // don't count hidden windows
+		) {
 			print("Not empty: " + cls[i].caption + " is there");
 			return false;
 		}
@@ -70,6 +73,11 @@ function desktop_changed_for(client)
 
 function window_closed(client)
 {
+	// don't do anything for hidden windows
+	if (client.skipPager)  return;
+	// don't do anything if window was not on last desktop
+	if (client.dekstop != workspace.desktops - 1)  return;
+
 	if (last_has_one(client)) {
 		delete_desktop();
 		// switch to previous desktop as this is empty now
@@ -79,6 +87,10 @@ function window_closed(client)
 
 function subscribe(client)
 {
+	if (client.skipPager) {
+		// don't subscribe to hidden windows
+		return;
+	}
 	print("Connected to " + client.caption);
 	client.desktopChanged.connect(desktop_changed_for(client));
 }

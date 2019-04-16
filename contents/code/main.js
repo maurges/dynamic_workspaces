@@ -35,13 +35,12 @@ function delete_desktop(number)
 	}
 
 	if (number >= workspace.desktops - 1) {
-		// actually perform deletion
+		// delete without shifting
 		delete_last();
 		return;
 	}
 
-	// shift all windows and the last desktop will delete itself as per
-	// case above triggered by connections on desktopChanged
+	delete_last();
 	workspace.clientList().forEach(shift_righter_than(number));
 }
 
@@ -122,8 +121,15 @@ function on_desktop_changed(old_desktop, client)
 {
 	if (client === null) {
 		// handle simple desktop switching
-		// TODO
+		if (old_desktop !== workspace.desktops && is_empty_desktop(old_desktop)) {
+			// delete desktop
+			// only delete desktop if doing so would be unnoticeable
+			if (old_desktop > workspace.currentDesktop) {
+				delete_desktop(old_desktop);
+			}
+		}
 	} else {
+		// handle client changing a desktop
 		desktop_changed_for(client);
 	}
 }

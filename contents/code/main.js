@@ -77,29 +77,38 @@ function delete_empty_last()
 
 function desktop_changed_for(client)
 {
-	return function()
-	{
-		var message = "Client " + client.caption + " just moved";
-		message += "\n to desktop number " + client.desktop;
-		message += " out of " + workspace.desktops;
+	var message = "Client " + client.caption + " just moved";
+	message += "\n to desktop number " + client.desktop;
+	message += " out of " + workspace.desktops;
 
-		if (client.desktop >= workspace.desktops) {
-			add_desktop();
-			message += "\nadded a desktop";
-		}
-		else {
-			delete_empty_last();
-		}
-
-		print(message);
+	if (client.desktop >= workspace.desktops) {
+		add_desktop();
+		message += "\nadded a desktop";
 	}
+	else {
+		delete_empty_last();
+	}
+
+	print(message);
 }
 
 
 function subscribe(client)
 {
+
+	print("Connected to " + client.caption + " on workspace " + client.desktop);
+	client.desktopChanged.connect(desktop_changed_for(client));
+}
+
+function on_client_added(client)
+{
+	if (client === null) {
+		// just in case
+		return;
+	}
+
 	if (client.skipPager) {
-		// don't subscribe to hidden windows
+		//ignore hidden windows
 		return;
 	}
 
@@ -107,16 +116,25 @@ function subscribe(client)
 	if (client.desktop >= workspace.desktops) {
 		add_desktop();
 	}
+}
 
-	print("Connected to " + client.caption + " on workspace " + client.desktop);
-	client.desktopChanged.connect(desktop_changed_for(client));
+function on_desktop_changed(old_desktop, client)
+{
+	if (client === null) {
+		// handle simple desktop switching
+		// TODO
+	} else {
+		desktop_changed_for(client);
+	}
 }
 
 
 /*****  Main part *****/
 
-workspace.clientAdded.connect(subscribe);
-// also subscribe all existing clients
-workspace.clientList().forEach(subscribe);
+// create desktop when client added
+workspace.clientAdded.connect(on_client_added);
+// also do this for all existing clients
+workspace.clientList().forEach(on_client_added);
 
-// TODO: create an empty desktop to the right if doesn't exist
+// subscribe to desktop change event
+workspace.currentDesktopChanged.connect(on_desktop_changed);

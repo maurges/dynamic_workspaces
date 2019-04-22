@@ -127,6 +127,13 @@ function on_desktop_changed(old_desktop, client)
 			if (old_desktop > workspace.currentDesktop) {
 				delete_desktop(old_desktop);
 			}
+		} else if (workspace.currentDesktop === 1) {
+			for (var i = 1; i < workspace.desktops; ++i) {
+				if (is_empty_desktop(i)) {
+					delete_desktop(i);
+					i -= 1;
+				}
+			}
 		}
 	} else {
 		// handle client changing a desktop

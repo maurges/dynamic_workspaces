@@ -76,19 +76,21 @@ function delete_empty_last()
 
 function desktop_changed_for(client)
 {
-	var message = "Client " + client.caption + " just moved";
-	message += "\n to desktop number " + client.desktop;
-	message += " out of " + workspace.desktops;
+	return function() {
+		var message = "Client " + client.caption + " just moved";
+		message += "\n to desktop number " + client.desktop;
+		message += " out of " + workspace.desktops;
 
-	if (client.desktop >= workspace.desktops) {
-		add_desktop();
-		message += "\nadded a desktop";
-	}
-	else {
-		delete_empty_last();
-	}
+		if (client.desktop >= workspace.desktops) {
+			add_desktop();
+			message += "\nadded a desktop";
+		}
+		else {
+			delete_empty_last();
+		}
 
-	print(message);
+		print(message);
+	}
 }
 
 
@@ -108,39 +110,40 @@ function on_client_added(client)
 	if (client.desktop >= workspace.desktops) {
 		add_desktop();
 	}
+
+	// subscribe the client to create desktops when desktop switched
+	client.desktopChanged.connect(desktop_changed_for(client))
 }
 
 function on_desktop_changed(old_desktop, client)
 {
-	if (client === null) {
-		// handle simple desktop switching
-		if (old_desktop !== workspace.desktops && is_empty_desktop(old_desktop)) {
-			// delete desktop
-			// only delete desktop if doing so would be unnoticeable
-			if (old_desktop > workspace.currentDesktop) {
-				delete_desktop(old_desktop);
-			}
-		} else if (workspace.currentDesktop === 1) {
-			for (var i = 1; i < workspace.desktops; ++i) {
-				if (is_empty_desktop(i)) {
-					delete_desktop(i);
-					i -= 1;
-				}
+	// delete empty desktops that we swithced from
+
+	if (old_desktop !== workspace.desktops && is_empty_desktop(old_desktop)) {
+		// delete desktop
+		// only delete desktop if doing so would be unnoticeable
+		if (old_desktop > workspace.currentDesktop) {
+			delete_desktop(old_desktop);
+		}
+	} else if (workspace.currentDesktop === 1) {
+		// delete all empty desktops to the right if we switched to first
+		for (var i = 1; i < workspace.desktops; ++i) {
+			if (is_empty_desktop(i)) {
+				delete_desktop(i);
+				i -= 1;
 			}
 		}
-	} else {
-		// handle client changing a desktop
-		desktop_changed_for(client);
 	}
 }
 
 
 /*****  Main part *****/
 
-// create desktop when client added
+// actions relating to creating desktops
+// also this subscribes all clients to their desktopChanged event
 workspace.clientAdded.connect(on_client_added);
 // also do this for all existing clients
 workspace.clientList().forEach(on_client_added);
 
-// subscribe to desktop change event
+// actions relating to deleting desktops
 workspace.currentDesktopChanged.connect(on_desktop_changed);

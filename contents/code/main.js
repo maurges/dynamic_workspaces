@@ -92,13 +92,6 @@ function desktop_changed_for(client)
 }
 
 
-function subscribe(client)
-{
-
-	print("Connected to " + client.caption + " on workspace " + client.desktop);
-	client.desktopChanged.connect(desktop_changed_for(client));
-}
-
 function on_client_added(client)
 {
 	if (client === null) {

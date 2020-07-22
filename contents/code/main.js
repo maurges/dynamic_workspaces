@@ -23,25 +23,29 @@ function delete_last()
 }
 
 // simulates deletion of desktop in the middle
+// Returns true if desktop was deleted, false if wasn't
 function delete_desktop(number)
 {
+	print("delete desktop " + number);
 	// don't do anything for last desktop
-	if (workspace.desktops == 1)  return;
+	if (workspace.desktops == 1)  return false;
+	if (workspace.desktops == number)  return false;
 
 	if (workspace.desktops == 2) {
 		// don't delete, only shift left
 		workspace.clientList().forEach(shift_righter_than(number));
-		return;
+		return false;
 	}
 
 	if (number >= workspace.desktops - 1) {
 		// delete without shifting
 		delete_last();
-		return;
+		return true;
 	}
 
 	delete_last();
 	workspace.clientList().forEach(shift_righter_than(number));
+	return true;
 }
 
 // tells if desktop has no windows of its own
@@ -129,8 +133,10 @@ function on_desktop_changed(old_desktop, client)
 		// delete all empty desktops to the right if we switched to first
 		for (var i = 1; i < workspace.desktops; ++i) {
 			if (is_empty_desktop(i)) {
-				delete_desktop(i);
-				i -= 1;
+				var deleted = delete_desktop(i);
+				if (deleted) {
+					i -= 1;
+				}
 			}
 		}
 	}

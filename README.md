@@ -12,7 +12,7 @@ What I did is this:
 - When you move window away from last desktop, or close the window,
   the desktop is destroyed
 
-Tested on Plasma versions 5.6 to 5.24.5
+Tested on Plasma versions 5.6 to 5.25
 
 ## Installation
 

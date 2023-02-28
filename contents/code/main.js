@@ -1,12 +1,15 @@
 const MIN_DESKTOPS = 2;
 const LOOP_LIMIT = 100;
 
-function add_desktop() {
+function add_desktop()
+{
 	print("add_desktop()");
 	workspace.desktops++;
 }
 
-function shift_righter_than(client, number) {
+// shifts a window to the left if it's more to the right than number
+function shift_righter_than(client, number)
+{
 	if (client.desktop > number) {
 		print(`Shifting ${client.caption} to desktop ${client.desktop - 1}`);
 		client.desktop--;
@@ -18,7 +21,8 @@ function shift_righter_than(client, number) {
  * Returns true if desktop was deleted, false if wasn't
  * @returns true if removed
  */
-function remove_desktop_with(number) {
+function remove_desktop_with(number)
+{
 	print(`remove_desktop_with(${number})`);
 
 	// don't do anything if below minimum desktops
@@ -40,7 +44,9 @@ function remove_desktop_with(number) {
 	return true;
 }
 
-function is_empty_desktop(number) {
+// tells if desktop has no windows of its own
+function is_empty_desktop(number)
+{
 	print(`is_empty_desktop(${number})`)
 	var cls = workspace.clientList();
 	for (var i = 0; i < cls.length; ++i) {
@@ -62,7 +68,8 @@ function is_empty_desktop(number) {
  * Checks for new created or moved windows if they are occupying the last desktop
  * -> if yes, create new one to the right
  */
-function desktop_changed_for(client) {
+function desktop_changed_for(client)
+{
 	print(`desktop_changed_for() -> Client ${client.caption} just moved to desktop number ${client.desktop}`);
 
 	if (client.desktop >= workspace.desktops) {
@@ -73,7 +80,8 @@ function desktop_changed_for(client) {
 /**
  * When creating new windows, check whether they are occupying the last desktop
  */
-function on_client_added(client) {
+function on_client_added(client)
+{
 	if (client === null) {
 		// just in case
 		return;
@@ -90,15 +98,14 @@ function on_client_added(client) {
 	}
 
 	// subscribe the client to create desktops when desktop switched
-	client.desktopChanged.connect(() => {
-		desktop_changed_for(client);
-	});
+	client.desktopChanged.connect(() => { desktop_changed_for(client); });
 }
 
 /**
  * Deletes empty desktops to the right in case of a left switch
  */
-function on_desktop_switch(old_desktop) {
+function on_desktop_switch(old_desktop)
+{
 	print(`on_desktop_switch(${old_desktop})`);
 
 	// do nothing if we switched to the right
@@ -119,14 +126,14 @@ function on_desktop_switch(old_desktop) {
 	}
 }
 
+
+/*****  Main part *****/
+
 // actions relating to creating desktops
 // also this subscribes all clients to their desktopChanged event
 workspace.clientAdded.connect(on_client_added);
-
 // also do this for all existing clients
 workspace.clientList().forEach(on_client_added);
 
 // handle change desktop events
-workspace.currentDesktopChanged.connect((old_desktop) => {
-	on_desktop_switch(old_desktop);
-});
+workspace.currentDesktopChanged.connect((old_desktop) => { on_desktop_switch(old_desktop); });

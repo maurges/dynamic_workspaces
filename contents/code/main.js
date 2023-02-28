@@ -3,7 +3,7 @@ const MIN_DESKTOPS = 2;
 function add_desktop()
 {
 	print("add_desktop()");
-	workspace.desktops++;
+	workspace.desktops += 1;
 }
 
 // shifts a window to the left if it's more to the right than number
@@ -11,7 +11,7 @@ function shift_righter_than(client, number)
 {
 	if (client.desktop > number) {
 		print(`Shifting ${client.caption} to desktop ${client.desktop - 1}`);
-		client.desktop--;
+		client.desktop -= 1;
 	}
 }
 

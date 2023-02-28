@@ -1,5 +1,4 @@
 const MIN_DESKTOPS = 2;
-const LOOP_LIMIT = 100;
 
 function add_desktop()
 {
@@ -116,9 +115,10 @@ function on_desktop_switch(old_desktop)
 
 	// prevent infinit loop in case of an error
 	// might happen if other plugins interfere with workspace creation/deletion
-	let safety = 0;
-	for (; desktop < workspace.desktops && safety < LOOP_LIMIT; desktop++) {
-		safety++;
+	let loop_counter = 0;
+	let loop_limit = workspace.desktops;
+	for (; desktop < workspace.desktops && loop_counter < loop_limit; desktop++) {
+		loop_counter++;
 		if (is_empty_desktop(desktop) && remove_desktop_with(desktop)) {
 			// we removed a desktop so we need to reduce our counter also
 			desktop--;

@@ -9,7 +9,8 @@ function add_desktop()
 // shifts a window to the left if it's more to the right than number
 function shift_righter_than(client, number)
 {
-	if (client.desktop > number) {
+	if (client.desktop > number)
+	{
 		print(`Shifting ${client.caption} to desktop ${client.desktop - 1}`);
 		client.desktop -= 1;
 	}
@@ -35,7 +36,8 @@ function remove_desktop_with(number)
 	// Once shifted remove desktop with the highest number
 	// This is less efficient than deleting directly,
 	// BUT the workspace names do not get messed up over time
-	workspace.clientList().forEach((client) => {
+	workspace.clientList().forEach((client) =>
+	{
 		shift_righter_than(client, number)
 	});
 
@@ -48,7 +50,8 @@ function is_empty_desktop(number)
 {
 	print(`is_empty_desktop(${number})`)
 	var cls = workspace.clientList();
-	for (var i = 0; i < cls.length; ++i) {
+	for (var i = 0; i < cls.length; ++i)
+	{
 		let client = cls[i];
 		// is client on desktop?
 		if (client.x11DesktopIds.indexOf(number) !== -1 // works also in wayland...
@@ -71,7 +74,8 @@ function desktop_changed_for(client)
 {
 	print(`desktop_changed_for() -> Client ${client.caption} just moved to desktop number ${client.desktop}`);
 
-	if (client.desktop >= workspace.desktops) {
+	if (client.desktop >= workspace.desktops)
+	{
 		add_desktop();
 	}
 }
@@ -81,18 +85,21 @@ function desktop_changed_for(client)
  */
 function on_client_added(client)
 {
-	if (client === null) {
+	if (client === null)
+	{
 		// just in case
 		return;
 	}
 
-	if (client.skipPager) {
+	if (client.skipPager)
+	{
 		//ignore hidden windows
 		return;
 	}
 
 	// add a new desktop for a client too right
-	if (client.desktop >= workspace.desktops) {
+	if (client.desktop >= workspace.desktops)
+	{
 		add_desktop();
 	}
 
@@ -117,9 +124,11 @@ function on_desktop_switch(old_desktop)
 	// might happen if other plugins interfere with workspace creation/deletion
 	let loop_counter = 0;
 	let loop_limit = workspace.desktops;
-	for (; desktop < workspace.desktops && loop_counter < loop_limit; desktop++) {
+	for (; desktop < workspace.desktops && loop_counter < loop_limit; desktop++)
+	{
 		loop_counter++;
-		if (is_empty_desktop(desktop) && remove_desktop_with(desktop)) {
+		if (is_empty_desktop(desktop) && remove_desktop_with(desktop))
+		{
 			// we removed a desktop so we need to reduce our counter also
 			desktop--;
 		}

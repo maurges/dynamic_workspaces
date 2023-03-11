@@ -1,143 +1,136 @@
+const MIN_DESKTOPS = 2;
+
 function add_desktop()
 {
+	print("add_desktop()");
 	workspace.desktops += 1;
 }
 
 // shifts a window to the left if it's more to the right than number
-function shift_righter_than(number)
+function shift_righter_than(client, number)
 {
-	return function(client)
+	if (client.desktop > number)
 	{
-		if (client.desktop > number) {
-			client.desktop -= 1;
-		}
+		print(`Shifting ${client.caption} to desktop ${client.desktop - 1}`);
+		client.desktop -= 1;
 	}
 }
 
-// deletes last desktop without fanfare
-function delete_last()
+/**
+ * Delete a desktop by number
+ * Returns true if desktop was deleted, false if wasn't
+ * @returns true if removed
+ */
+function remove_desktop_with(number)
 {
-	// don't do anything if last two remain
-	if (workspace.desktops <= 2)  return;
-	workspace.desktops -= 1;
-}
+	print(`remove_desktop_with(${number})`);
 
-// simulates deletion of desktop in the middle
-// Returns true if desktop was deleted, false if wasn't
-function delete_desktop(number)
-{
-	print("delete desktop " + number);
-	// don't do anything for last desktop
-	if (workspace.desktops == 1)  return false;
-	if (workspace.desktops == number)  return false;
+	// don't do anything if below minimum desktops
+	if (workspace.desktops <= MIN_DESKTOPS) return false;
 
-	if (workspace.desktops == 2) {
-		// don't delete, only shift left
-		workspace.clientList().forEach(shift_righter_than(number));
-		return false;
-	}
+	// do not remove empty desktop at the end
+	if (workspace.desktops == number) return false;
 
-	if (number >= workspace.desktops - 1) {
-		// delete without shifting
-		delete_last();
-		return true;
-	}
+	// Shift all clients right from desktop $number to the left
+	// instead of deleting the desktop directly
+	// Once shifted remove desktop with the highest number
+	// This is less efficient than deleting directly,
+	// BUT the workspace names do not get messed up over time
+	workspace.clientList().forEach((client) =>
+	{
+		shift_righter_than(client, number)
+	});
 
-	delete_last();
-	workspace.clientList().forEach(shift_righter_than(number));
+	workspace.removeDesktop(workspace.desktops - 1);
 	return true;
 }
 
 // tells if desktop has no windows of its own
 function is_empty_desktop(number)
 {
+	print(`is_empty_desktop(${number})`)
 	var cls = workspace.clientList();
-	for (var i = 0; i < cls.length; ++i) {
-		if (cls[i].desktop == number
-			&& !cls[i].skipPager // don't count hidden windows
+	for (var i = 0; i < cls.length; ++i)
+	{
+		let client = cls[i];
+		// is client on desktop?
+		if (client.x11DesktopIds.indexOf(number) !== -1 // works also in wayland...
+			&& !client.skipPager // ignore hidden windows
+			&& !client.onAllDesktops // ignore windows on all desktops
 		) {
-			print("Not empty: " + cls[i].caption + " is there");
+			print(`Desktop ${number} not empty because ${client.caption} is there`);
 			return false;
 		}
 	}
+
 	return true;
 }
 
-function is_last_empty()
-{
-	// -1 as we always have the last desktop that we keep empty for moving
-	// things to it
-	return is_empty_desktop(workspace.desktops - 1);
-}
-
-function delete_empty_last()
-{
-	if (is_last_empty()) {
-		delete_last();
-		print("deleted last desktop");
-	}
-}
-
+/**
+ * Checks for new created or moved windows if they are occupying the last desktop
+ * -> if yes, create new one to the right
+ */
 function desktop_changed_for(client)
 {
-	return function() {
-		var message = "Client " + client.caption + " just moved";
-		message += "\n to desktop number " + client.desktop;
-		message += " out of " + workspace.desktops;
+	print(`desktop_changed_for() -> Client ${client.caption} just moved to desktop number ${client.desktop}`);
 
-		if (client.desktop >= workspace.desktops) {
-			add_desktop();
-			message += "\nadded a desktop";
-		}
-		else {
-			delete_empty_last();
-		}
-
-		print(message);
+	if (client.desktop >= workspace.desktops)
+	{
+		add_desktop();
 	}
 }
 
-
+/**
+ * When creating new windows, check whether they are occupying the last desktop
+ */
 function on_client_added(client)
 {
-	if (client === null) {
+	if (client === null)
+	{
 		// just in case
 		return;
 	}
 
-	if (client.skipPager) {
+	if (client.skipPager)
+	{
 		//ignore hidden windows
 		return;
 	}
 
 	// add a new desktop for a client too right
-	if (client.desktop >= workspace.desktops) {
+	if (client.desktop >= workspace.desktops)
+	{
 		add_desktop();
 	}
 
 	// subscribe the client to create desktops when desktop switched
-	client.desktopChanged.connect(desktop_changed_for(client))
+	client.desktopChanged.connect(() => { desktop_changed_for(client); });
 }
 
-function on_desktop_changed(old_desktop, client)
+/**
+ * Deletes empty desktops to the right in case of a left switch
+ */
+function on_desktop_switch(old_desktop)
 {
-	// delete empty desktops that we swithced from
+	print(`on_desktop_switch(${old_desktop})`);
 
-	if (old_desktop !== workspace.desktops && is_empty_desktop(old_desktop)) {
-		// delete desktop
-		// only delete desktop if doing so would be unnoticeable
-		if (old_desktop > workspace.currentDesktop) {
-			delete_desktop(old_desktop);
-		}
-	} else if (workspace.currentDesktop === 1) {
-		// delete all empty desktops to the right if we switched to first
-		for (var i = 1; i < workspace.desktops; ++i) {
-			if (is_empty_desktop(i)) {
-				var deleted = delete_desktop(i);
-				if (deleted) {
-					i -= 1;
-				}
-			}
+	// do nothing if we switched to the right
+	if (old_desktop <= workspace.currentDesktop) return;
+
+	// start from next desktop to the right
+	let desktop = workspace.currentDesktop + 1;
+
+	// prevent infinit loop in case of an error
+	// might happen if other plugins interfere with workspace creation/deletion
+	let loop_counter = 0;
+	let loop_limit = workspace.desktops;
+	for (; desktop < workspace.desktops && loop_counter < loop_limit; desktop++)
+	{
+		loop_counter++;
+		if (is_empty_desktop(desktop) && remove_desktop_with(desktop))
+		{
+			// we removed a desktop so we need to reduce our counter also
+			desktop--;
 		}
 	}
 }
@@ -151,5 +144,5 @@ workspace.clientAdded.connect(on_client_added);
 // also do this for all existing clients
 workspace.clientList().forEach(on_client_added);
 
-// actions relating to deleting desktops
-workspace.currentDesktopChanged.connect(on_desktop_changed);
+// handle change desktop events
+workspace.currentDesktopChanged.connect((old_desktop) => { on_desktop_switch(old_desktop); });

@@ -12,7 +12,9 @@ What I did is this:
 - When you move window away from last desktop, or close the window,
   the desktop is destroyed
 
-Tested on Plasma versions 5.6 to 5.26.5
+Version 2.0 tested on Plasma version 5.27. For versions tested since 5.6, see
+releases `1.*`, latest found
+[here](https://github.com/d86leader/dynamic_workspaces/releases/tag/v1.0.1)
 
 ## Installation
 

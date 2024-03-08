@@ -123,13 +123,10 @@ function on_client_added(client)
 	}
 
 	// add a new desktop for a client too right
-	for (let i = 0; i < client.desktops.length; ++i)
+	const last_desktop = workspace.desktops[workspace.desktops.length - 1];
+	if (client.desktops.indexOf(last_desktop) != -1)
 	{
-		if (client.desktops[i] >= workspace.desktops)
-		{
-			add_desktop();
-		}
-
+		add_desktop();
 	}
 
 	// subscribe the client to create desktops when desktop switched

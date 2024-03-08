@@ -1,0 +1,22 @@
+{ "KPackageStructure": "KWin/Script"
+, "KPlugin":
+    { "Authors":
+        [ { "Email": "opendesktop@morj.men"
+          , "Name": "morj"
+          }
+        ]
+    , "Description": "Automatically adds and removes workspaces when windows move to empty ones"
+    , "Icon": "preferences-system-windows-script-test"
+    , "Id": "dynamic-workspaces"
+    , "License": "BSD"
+    , "Name": "Dynamic Workspaces"
+    , "Version": "0.4.0"
+    }
+, "X-KDE-PluginKeyword": "workspaces"
+
+, "X-Plasma-API": "javascript"
+, "X-Plasma-API-Minimum-Version": "6.0"
+
+, "X-KDE-Library": "kwin/effects/configs/kcm_kwin4_genericscripted"
+, "X-Plasma-MainScript": "code/main.js"
+}

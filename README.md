@@ -18,20 +18,31 @@ releases `1.*`, latest found
 
 ## Installation
 
+On plasma 5:
+
 ``` bash
 git clone https://github.com/d86leader/dynamic_workspaces.git
 cd dynamic_workspaces
 plasmapkg2 --type kwinscript -i .
 ```
 
+On plasma 6, instead of the last line:
+
+```sh
+kpackagetool6 --type KWin/Script --install .
+```
+
 Then you might need to restart kwin. Do this by either logging out and back in, or by running `kwin_x11 --replace` in krunner.
 
 ### Upgrade
 
-If updating, change the `plasmapkg2` command above to the following:
+If updating, change the `plasmapkg2`/`kpackagetool6` command above to the following:
 
 ``` bash
+# plasma 5
 plasmapkg2 --type kwinscript -u .
+# plasma 6
+kpackagetool6 --type KWin/Script --upgrade .
 ```
 
 ## Known issues

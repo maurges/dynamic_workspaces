@@ -5,9 +5,14 @@
 
 const MIN_DESKTOPS = 2;
 
+function log(...args)
+{
+	print("[dynamic_workspaces] ", ...args);
+}
+
 function add_desktop()
 {
-	print("add_desktop()");
+	log("add_desktop()");
 	workspace.createDesktop(workspace.desktops.length, "dyndesk");
 }
 
@@ -16,13 +21,13 @@ function shift_righter_than(client, number)
 {
 	// Build a new array by comparing old client desktops with all available
 	// desktops
-	let all_desktops = workspace.desktops;
-	let client_desktops = client.desktops;
+	const all_desktops = workspace.desktops;
+	const client_desktops = client.desktops;
 	let new_desktops = [];
 	// first add unchanged desktops
 	for (let i = 0; i <= number; ++i)
 	{
-		let d = all_desktops[i];
+		const d = all_desktops[i];
 		if (client_desktops.indexOf(d) != -1)
 		{
 			new_desktops.push(d);
@@ -31,7 +36,7 @@ function shift_righter_than(client, number)
 	// then for every desktop after `number`, add a desktop before that
 	for (let i = number + 1; i < all_desktops.length; ++i)
 	{
-		let d = all_desktops[i];
+		const d = all_desktops[i];
 		if (client_desktops.indexOf(d) != -1)
 		{
 			new_desktops.push(all_desktops[i-1]);
@@ -48,7 +53,7 @@ function shift_righter_than(client, number)
  */
 function remove_desktop_with(number)
 {
-	print(`remove_desktop_with(${number})`);
+	log(`remove_desktop_with(${number})`);
 
 	// don't do anything if below minimum desktops
 	if (workspace.desktops.length <= MIN_DESKTOPS) return false;
@@ -71,21 +76,20 @@ function remove_desktop_with(number)
 // tells if desktop has no windows of its own
 function is_empty_desktop(number)
 {
-	let desktop = workspace.desktops[number];
-	print(`is_empty_desktop(${number})`)
-	var cls = workspace.windowList();
-	for (var i = 0; i < cls.length; ++i)
+	const desktop = workspace.desktops[number];
+	log(`is_empty_desktop(${number})`)
+	const cls = workspace.windowList();
+	cls.forEach(client =>
 	{
-		let client = cls[i];
 		// is client on desktop?
 		if (client.desktops.indexOf(desktop) !== -1
 			&& !client.skipPager // ignore hidden windows
 			&& !client.onAllDesktops // ignore windows on all desktops
 		) {
-			print(`Desktop ${number} not empty because ${client.caption} is there`);
+			log(`Desktop ${number} not empty because ${client.caption} is there`);
 			return false;
 		}
-	}
+	});
 
 	return true;
 }
@@ -96,9 +100,9 @@ function is_empty_desktop(number)
  */
 function desktop_changed_for(client)
 {
-	print(`desktop_changed_for() -> Client ${client.caption} just moved to desktop number ${client.desktops}`);
+	log(`desktop_changed_for() -> Client ${client.caption} just moved to desktop number ${client.desktops}`);
 
-	let last_desktop = workspace.desktops[workspace.desktops.length - 1];
+	const last_desktop = workspace.desktops[workspace.desktops.length - 1];
 	if (client.desktops.indexOf(last_desktop) != -1)
 	{
 		add_desktop();
@@ -138,10 +142,10 @@ function on_client_added(client)
  */
 function on_desktop_switch(old_desktop)
 {
-	print(`on_desktop_switch(${old_desktop})`);
+	log(`on_desktop_switch(${old_desktop})`);
 
-	let old_desktop_index = workspace.desktops.indexOf(old_desktop);
-	let current_desktop_index = workspace.desktops.indexOf(workspace.currentDesktop)
+	const old_desktop_index = workspace.desktops.indexOf(old_desktop);
+	const current_desktop_index = workspace.desktops.indexOf(workspace.currentDesktop)
 
 	// do nothing if we switched to the right
 	if (old_desktop_index <= current_desktop_index) return;
@@ -152,13 +156,13 @@ function on_desktop_switch(old_desktop)
 	// prevent infinite loop in case of an error - only try as many times as there are desktops.
 	// Might save us if other plugins interfere with workspace creation/deletion
 	let loop_counter = 0;
-	let loop_limit = workspace.desktops.length;
+	const loop_limit = workspace.desktops.length;
 	for (; desktop_idx < workspace.desktops.length && loop_counter < loop_limit; ++desktop_idx)
 	{
 		loop_counter += 1;
 		if (is_empty_desktop(desktop_idx))
 		{
-			let success = remove_desktop_with(desktop_idx);
+			const success = remove_desktop_with(desktop_idx);
 			if (success)
 			{
 				// we removed a desktop so we need to reduce our counter also

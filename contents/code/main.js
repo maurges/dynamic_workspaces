@@ -3,6 +3,8 @@
 //   order as in pager and all context menus
 // 2. Desktops being comparable for equality with `==` operator
 
+// Desktop numbers are from zero (unlike how it worked in plasma 5)
+
 const MIN_DESKTOPS = 2;
 
 const isKde6 = typeof workspace.windowList === "function";
@@ -29,22 +31,17 @@ const compat = isKde6
 			{
 				c.desktops = ds;
 			}
-		, clientOnDesktop = (c, d) => client.desktops.indexOf(d) !== -1
+		, clientOnDesktop = (c, d) => c.desktops.indexOf(d) !== -1
 		}
 	:
 		{ addDesktop = () =>
-			{ workspace.desktops += 1; }
+			{ workspace.createDesktop(workspace.desktops, "dyndesk"); }
 		, windowAddedSignal = ws => ws.clientAdded
 		, windowList = ws => ws.clientList()
 		, desktopChangedSignal = c => c.desktopChanged
 
 		// emulate plasma 6 behaviour with custom types
-		, toDesktop = number =>
-			{
-				return
-					{ index: number - 1;
-					}
-			}
+		, toDesktop = number => {{ index: number - 1 }}
 		, workspaceDesktops = () =>
 			{
 				let r = [];
@@ -57,18 +54,14 @@ const compat = isKde6
 				}
 				return r;
 			}
-		, lastDesktop = () =>
-			{
-				return { index: workspace.desktops - 1
-				       };
-			}
+		, lastDesktop = () => {{ index: workspace.desktops - 1 }}
 		, deleteLastDesktop = () =>
 			{ workspace.removeDesktop(workspace.desktops - 1); }
 		, findDesktop = (ds, d) =>
 			{
 				for (let i = 0; i < ds.length; ++i)
 				{
-					if (ds[i].index == d.index)
+					if (ds[i].index === d.index)
 					{
 						return i;
 					}
@@ -77,13 +70,15 @@ const compat = isKde6
 			}
 
 		, clientDesktops = c =>
-			{
-				return [ { index: c.desktop - 1
-				         }
-				       ]
-			}
+			c
+				.x11DesktopIds
+				.map(id => {return {index: id - 1}})
 		, setClientDesktops = (c, ds) =>
 			{
+				// Plasma 5 is supports window on multiple desktops, and there
+				// are even functions for it in the API, but they are bugged.
+				// So we have to do this. So far, noone has complained, so
+				// maybe noone uses this feature?
 				c.desktop = ds[0];
 			}
 		, clientOnDesktop = (c, d) => c.desktop === d.index + 1
@@ -97,25 +92,26 @@ function log(...args)
 // shifts a window to the left if it's more to the right than number
 function shift_righter_than(client, number)
 {
+	if (number === 0)  return;
 	// Build a new array by comparing old client desktops with all available
 	// desktops
 	const all_desktops = compat.workspaceDesktops();
 	const client_desktops = compat.clientDesktops(client);
 	let new_desktops = [];
 	// first add unchanged desktops
-	for (let i = 0; i <= number; ++i)
+	for (let i = 0; i < number; ++i)
 	{
 		const d = all_desktops[i];
-		if (compat.findDesktop(client_desktops, d) != -1)
+		if (compat.findDesktop(client_desktops, d) !== -1)
 		{
 			new_desktops.push(d);
 		}
 	}
 	// then for every desktop after `number`, add a desktop before that
-	for (let i = number + 1; i < all_desktops.length; ++i)
+	for (let i = number; i < all_desktops.length; ++i)
 	{
 		const d = all_desktops[i];
-		if (compat.findDesktop(client_desktops, d) != -1)
+		if (compat.findDesktop(client_desktops, d) !== -1)
 		{
 			new_desktops.push(all_desktops[i-1]);
 		}
@@ -134,10 +130,10 @@ function remove_desktop_with(number)
 	log(`remove_desktop_with(${number})`);
 
 	const desktopsLength = compat.workspaceDesktops().length;
+	// do not remove empty desktop at the end
+	if (desktopsLength - 1 <= number) return false;
 	// don't do anything if below minimum desktops
 	if (desktopsLength <= MIN_DESKTOPS) return false;
-	// do not remove empty desktop at the end
-	if (desktopsLength - 1 == number) return false;
 
 	// plasma6 allows us to delete desktops in the middle. Unfortunately, this
 	// messes up pager, so we have to do what we did un plasma5 and shift all
@@ -156,17 +152,16 @@ function is_empty_desktop(number)
 	const desktop = compat.workspaceDesktops()[number];
 	log(`is_empty_desktop(${number})`)
 	const cls = compat.windowList(workspace);
-	cls.forEach(client =>
+	for (client of cls)
 	{
-		// is client on desktop?
-		if (compat.clientOnDesktop(client, desktop) !== -1
+		if (compat.clientOnDesktop(client, desktop)
 			&& !client.skipPager // ignore hidden windows
 			&& !client.onAllDesktops // ignore windows on all desktops
 		) {
 			log(`Desktop ${number} not empty because ${client.caption} is there`);
 			return false;
 		}
-	});
+	}
 
 	return true;
 }
@@ -180,7 +175,7 @@ function desktop_changed_for(client)
 	log(`desktop_changed_for() -> Client ${client.caption} just moved`);
 
 	const last_desktop = compat.lastDesktop();
-	if (compat.clientOnDesktop(client, last_desktop) != -1)
+	if (compat.clientOnDesktop(client, last_desktop))
 	{
 		compat.addDesktop();
 	}
@@ -205,7 +200,7 @@ function on_client_added(client)
 
 	// add a new desktop for a client too right
 	const last_desktop = compat.lastDesktop();
-	if (compat.clientOnDesktop(client, last_desktop) != -1)
+	if (compat.clientOnDesktop(client, last_desktop))
 	{
 		compat.addDesktop();
 	}

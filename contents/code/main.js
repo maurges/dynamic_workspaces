@@ -90,44 +90,44 @@ function log(...args)
 }
 
 // shifts a window to the left if it's more to the right than number
-function shift_righter_than(client, number)
+function shiftRighterThan(client, number)
 {
 	if (number === 0)  return;
 	// Build a new array by comparing old client desktops with all available
 	// desktops
-	const all_desktops = compat.workspaceDesktops();
-	const client_desktops = compat.clientDesktops(client);
-	let new_desktops = [];
+	const allDesktops = compat.workspaceDesktops();
+	const clientDesktops = compat.clientDesktops(client);
+	let newDesktops = [];
 	// first add unchanged desktops
 	for (let i = 0; i < number; ++i)
 	{
-		const d = all_desktops[i];
-		if (compat.findDesktop(client_desktops, d) !== -1)
+		const d = allDesktops[i];
+		if (compat.findDesktop(clientDesktops, d) !== -1)
 		{
-			new_desktops.push(d);
+			newDesktops.push(d);
 		}
 	}
 	// then for every desktop after `number`, add a desktop before that
-	for (let i = number; i < all_desktops.length; ++i)
+	for (let i = number; i < allDesktops.length; ++i)
 	{
-		const d = all_desktops[i];
-		if (compat.findDesktop(client_desktops, d) !== -1)
+		const d = allDesktops[i];
+		if (compat.findDesktop(clientDesktops, d) !== -1)
 		{
-			new_desktops.push(all_desktops[i-1]);
+			newDesktops.push(allDesktops[i-1]);
 		}
 	}
 
-	compat.setClientDesktops(client, new_desktops);
+	compat.setClientDesktops(client, newDesktops);
 }
 
 /**
- * Delete a desktop by number
- * Returns true if desktop was deleted, false if wasn't
- * @returns true if removed
+ * Delete a desktop by index
+ *
+ * @returns true if desktop was deleted, false if wasn't
  */
-function remove_desktop_with(number)
+function removeDesktop(number)
 {
-	log(`remove_desktop_with(${number})`);
+	log(`removeDesktop(${number})`);
 
 	const desktopsLength = compat.workspaceDesktops().length;
 	// do not remove empty desktop at the end
@@ -140,17 +140,17 @@ function remove_desktop_with(number)
 	// windows by hand to delete the last desktop
 	compat.windowList(workspace).forEach((client) =>
 	{
-		shift_righter_than(client, number)
+		shiftRighterThan(client, number)
 	});
 	compat.deleteLastDesktop();
 	return true;
 }
 
 // tells if desktop has no windows of its own
-function is_empty_desktop(number)
+function isEmptyDesktop(number)
 {
 	const desktop = compat.workspaceDesktops()[number];
-	log(`is_empty_desktop(${number})`)
+	log(`isEmptyDesktop(${number})`)
 	const cls = compat.windowList(workspace);
 	for (client of cls)
 	{
@@ -170,12 +170,12 @@ function is_empty_desktop(number)
  * Checks for new created or moved windows if they are occupying the last desktop
  * -> if yes, create new one to the right
  */
-function desktop_changed_for(client)
+function onDesktopChangedFor(client)
 {
-	log(`desktop_changed_for() -> Client ${client.caption} just moved`);
+	log(`onDesktopChangedFor() -> Client ${client.caption} just moved`);
 
-	const last_desktop = compat.lastDesktop();
-	if (compat.clientOnDesktop(client, last_desktop))
+	const lastDesktops = compat.lastDesktop();
+	if (compat.clientOnDesktop(client, lastDesktops))
 	{
 		compat.addDesktop();
 	}
@@ -184,7 +184,7 @@ function desktop_changed_for(client)
 /**
  * When creating new windows, check whether they are occupying the last desktop
  */
-function on_client_added(client)
+function onClientAdded(client)
 {
 	if (client === null)
 	{
@@ -199,47 +199,46 @@ function on_client_added(client)
 	}
 
 	// add a new desktop for a client too right
-	const last_desktop = compat.lastDesktop();
-	if (compat.clientOnDesktop(client, last_desktop))
+	if (compat.clientOnDesktop(client, compat.lastDesktop()))
 	{
 		compat.addDesktop();
 	}
 
 	// subscribe the client to create desktops when desktop switched
-	compat.desktopChangedSignal(client).connect(() => { desktop_changed_for(client); });
+	compat.desktopChangedSignal(client).connect(() => { onDesktopChangedFor(client); });
 }
 
 /**
  * Deletes empty desktops to the right in case of a left switch
  */
-function on_desktop_switch(old_desktop)
+function onDesktopSwitch(oldDesktops)
 {
-	log(`on_desktop_switch(${old_desktop})`);
+	log(`onDesktopSwitch(${oldDesktops})`);
 
 	const allDesktops = compat.workspaceDesktops();
-	const old_desktop_index = compat.findDesktop(allDesktops, compat.toDesktop(old_desktop));
-	const current_desktop_index = compat.findDesktop(allDesktops, compat.toDesktop(workspace.currentDesktop));
+	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktops));
+	const currentDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(workspace.currentDesktop));
 
 	// do nothing if we switched to the right
-	if (old_desktop_index <= current_desktop_index) return;
+	if (oldDesktopIndex <= currentDesktopIndex) return;
 
 	// start from next desktop to the right
-	let desktop_idx = current_desktop_index + 1;
+	let desktopIdx = currentDesktopIndex + 1;
 
 	// prevent infinite loop in case of an error - only try as many times as there are desktops.
 	// Might save us if other plugins interfere with workspace creation/deletion
-	let loop_counter = 0;
+	let loopCounter = 0;
 	const desktopsLength = compat.workspaceDesktops().length;
-	for (; desktop_idx < desktopsLength && loop_counter < desktopsLength; ++desktop_idx)
+	for (; desktopIdx < desktopsLength && loopCounter < desktopsLength; ++desktopIdx)
 	{
-		loop_counter += 1;
-		if (is_empty_desktop(desktop_idx))
+		loopCounter += 1;
+		if (isEmptyDesktop(desktopIdx))
 		{
-			const success = remove_desktop_with(desktop_idx);
+			const success = removeDesktop(desktopIdx);
 			if (success)
 			{
 				// we removed a desktop so we need to reduce our counter also
-				desktop_idx -= 1;
+				desktopIdx -= 1;
 			}
 		}
 	}
@@ -251,9 +250,9 @@ function on_desktop_switch(old_desktop)
 
 // actions relating to creating desktops
 // also this subscribes all clients to their desktopsChanged event
-compat.windowAddedSignal(workspace).connect(on_client_added);
+compat.windowAddedSignal(workspace).connect(onClientAdded);
 // also do this for all existing clients
-compat.windowList(workspace).forEach(on_client_added);
+compat.windowList(workspace).forEach(onClientAdded);
 
 // handle change desktop events
-workspace.currentDesktopChanged.connect((old_desktop) => { on_desktop_switch(old_desktop); });
+workspace.currentDesktopChanged.connect(onDesktopSwitch);

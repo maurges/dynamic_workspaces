@@ -5,7 +5,18 @@
 
 // Desktop numbers are from zero (unlike how it worked in plasma 5)
 
+
 const MIN_DESKTOPS = 2;
+const LOG_LEVEL = 2; // 0 trace, 1 debug, 2 info
+
+
+function log(...args) { print("[dynamic_workspaces] ", ...args); }
+function debug(...args) { if (LOG_LEVEL <= 1)  log(...args); }
+function trace(...args) { if (LOG_LEVEL <= 0)  log(...args); }
+
+
+/*****  Plasma 5/6 differences  *****/
+
 
 const isKde6 = typeof workspace.windowList === "function";
 const compat = isKde6
@@ -84,14 +95,14 @@ const compat = isKde6
 		, clientOnDesktop = (c, d) => c.desktop === d.index + 1
 		};
 
-function log(...args)
-{
-	print("[dynamic_workspaces] ", ...args);
-}
+
+/*****  Logic definition  *****/
+
 
 // shifts a window to the left if it's more to the right than number
 function shiftRighterThan(client, number)
 {
+	trace(`shiftRighterThan(${client.caption}, ${number})`);
 	if (number === 0)  return;
 	// Build a new array by comparing old client desktops with all available
 	// desktops
@@ -127,13 +138,19 @@ function shiftRighterThan(client, number)
  */
 function removeDesktop(number)
 {
-	log(`removeDesktop(${number})`);
+	trace(`removeDesktop(${number})`);
 
 	const desktopsLength = compat.workspaceDesktops().length;
-	// do not remove empty desktop at the end
-	if (desktopsLength - 1 <= number) return false;
-	// don't do anything if below minimum desktops
-	if (desktopsLength <= MIN_DESKTOPS) return false;
+	if (desktopsLength - 1 <= number)
+	{
+		debug("Not removing desktop at end");
+		return false;
+	}
+	if (desktopsLength <= MIN_DESKTOPS)
+	{
+		debug("Not removing desktop, too few left");
+		return false;
+	}
 
 	// plasma6 allows us to delete desktops in the middle. Unfortunately, this
 	// messes up pager, so we have to do what we did un plasma5 and shift all
@@ -143,14 +160,15 @@ function removeDesktop(number)
 		shiftRighterThan(client, number)
 	});
 	compat.deleteLastDesktop();
+	debug("Desktop removed");
 	return true;
 }
 
 // tells if desktop has no windows of its own
 function isEmptyDesktop(number)
 {
+	trace(`isEmptyDesktop(${number})`)
 	const desktop = compat.workspaceDesktops()[number];
-	log(`isEmptyDesktop(${number})`)
 	const cls = compat.windowList(workspace);
 	for (client of cls)
 	{
@@ -158,7 +176,7 @@ function isEmptyDesktop(number)
 			&& !client.skipPager // ignore hidden windows
 			&& !client.onAllDesktops // ignore windows on all desktops
 		) {
-			log(`Desktop ${number} not empty because ${client.caption} is there`);
+			debug(`Desktop ${number} not empty because ${client.caption} is there`);
 			return false;
 		}
 	}
@@ -172,7 +190,7 @@ function isEmptyDesktop(number)
  */
 function onDesktopChangedFor(client)
 {
-	log(`onDesktopChangedFor() -> Client ${client.caption} just moved`);
+	trace(`onDesktopChangedFor(${client.caption})`);
 
 	const lastDesktops = compat.lastDesktop();
 	if (compat.clientOnDesktop(client, lastDesktops))
@@ -188,13 +206,14 @@ function onClientAdded(client)
 {
 	if (client === null)
 	{
-		// just in case
+		log("onClientAdded(null) - that may happen rarely");
 		return;
 	}
+	trace(`onClientAdded(${client.caption})`);
 
 	if (client.skipPager)
 	{
-		//ignore hidden windows
+		debug("Ignoring added hidden window");
 		return;
 	}
 
@@ -211,16 +230,18 @@ function onClientAdded(client)
 /**
  * Deletes empty desktops to the right in case of a left switch
  */
-function onDesktopSwitch(oldDesktops)
+function onDesktopSwitch(oldDesktop)
 {
-	log(`onDesktopSwitch(${oldDesktops})`);
+	trace(`onDesktopSwitch(${oldDesktop})`);
 
 	const allDesktops = compat.workspaceDesktops();
-	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktops));
+	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktop));
 	const currentDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(workspace.currentDesktop));
 
-	// do nothing if we switched to the right
-	if (oldDesktopIndex <= currentDesktopIndex) return;
+	if (oldDesktopIndex <= currentDesktopIndex)
+	{
+		debug("Desktop switched to the right - ignoring");
+	}
 
 	// start from next desktop to the right
 	let desktopIdx = currentDesktopIndex + 1;
@@ -231,6 +252,7 @@ function onDesktopSwitch(oldDesktops)
 	const desktopsLength = compat.workspaceDesktops().length;
 	for (; desktopIdx < desktopsLength && loopCounter < desktopsLength; ++desktopIdx)
 	{
+		debug(`Examine desktop ${desktopIdx}`);
 		loopCounter += 1;
 		if (isEmptyDesktop(desktopIdx))
 		{
@@ -248,11 +270,11 @@ function onDesktopSwitch(oldDesktops)
 /*****  Main part *****/
 
 
-// actions relating to creating desktops
-// also this subscribes all clients to their desktopsChanged event
-compat.windowAddedSignal(workspace).connect(onClientAdded);
-// also do this for all existing clients
+// Adding or removing a client might create desktops.
+// For all existing clients:
 compat.windowList(workspace).forEach(onClientAdded);
+// And for all future clients:
+compat.windowAddedSignal(workspace).connect(onClientAdded);
 
-// handle change desktop events
+// Switching desktops might remove desktops
 workspace.currentDesktopChanged.connect(onDesktopSwitch);

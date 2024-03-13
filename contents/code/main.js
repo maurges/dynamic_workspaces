@@ -8,7 +8,7 @@ const MIN_DESKTOPS = 2;
 function add_desktop()
 {
 	print("add_desktop()");
-	workspace.createDesktop(workspace.desktops.length, "dyndesk");
+	workspace.createDesktop(workspace.desktops.length, "Dynamic " + (workspace.desktops.length + 1));
 }
 
 // shifts a window to the left if it's more to the right than number

@@ -12,8 +12,8 @@ What I did is this:
 - When you move window away from last desktop, or close the window,
   the desktop is destroyed
 
-Version 2.0 tested on Plasma version 5.27. For versions tested since 5.6, see
-releases `1.*`, latest found
+Version 3.0 tested on Plasma versions from 5.27 to 6.0.3. For versions tested
+since 5.6, see releases `1.*`, latest found
 [here](https://github.com/d86leader/dynamic_workspaces/releases/tag/v1.0.1)
 
 ## Installation
@@ -49,4 +49,3 @@ kpackagetool6 --type KWin/Script --upgrade .
 
 This script doesn't live well with other scripts that create workspaces.
 Mix at your own risk!
-If you find a compatibility issue you can fix, fix it and make a merge request. (-:

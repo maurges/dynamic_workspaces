@@ -241,6 +241,7 @@ function onDesktopSwitch(oldDesktop)
 	if (oldDesktopIndex <= currentDesktopIndex)
 	{
 		debug("Desktop switched to the right - ignoring");
+		return;
 	}
 
 	// start from next desktop to the right
@@ -249,8 +250,8 @@ function onDesktopSwitch(oldDesktop)
 	// prevent infinite loop in case of an error - only try as many times as there are desktops.
 	// Might save us if other plugins interfere with workspace creation/deletion
 	let loopCounter = 0;
-	const desktopsLength = compat.workspaceDesktops().length;
-	for (; desktopIdx < desktopsLength && loopCounter < desktopsLength; ++desktopIdx)
+	const getDesktopsLength = () => compat.workspaceDesktops().length;
+	for (; desktopIdx < getDesktopsLength() && loopCounter < getDesktopsLength(); ++desktopIdx)
 	{
 		debug(`Examine desktop ${desktopIdx}`);
 		loopCounter += 1;

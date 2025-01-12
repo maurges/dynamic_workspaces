@@ -1,2 +1,2 @@
-dynamic_workspaces.tar.gz:
-	tar czvf $@ contents/ LICENSE README.md metadata.json
+dynamic_workspaces.tar.gz: contents/code/main.js LICENSE README.md metadata.json
+	tar czvf $@ $^

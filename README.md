@@ -12,37 +12,37 @@ What I did is this:
 - When you move window away from last desktop, or close the window,
   the desktop is destroyed
 
-Version 3.0 tested on Plasma versions from 5.27 to 6.0.3. For versions tested
+Version 3.1 tested on Plasma versions from 5.27 to 6.2.5. For versions tested
 since 5.6, see releases `1.*`, latest found
 [here](https://github.com/d86leader/dynamic_workspaces/releases/tag/v1.0.1)
 
 ## Installation
 
-On plasma 5:
+On plasma 6:
 
 ``` bash
 git clone https://github.com/d86leader/dynamic_workspaces.git
 cd dynamic_workspaces
-plasmapkg2 --type kwinscript -i .
-```
-
-On plasma 6, instead of the last line:
-
-```sh
 kpackagetool6 --type KWin/Script --install .
 ```
 
-Then you might need to restart kwin. Do this by either logging out and back in, or by running `kwin_x11 --replace` in krunner.
+On plasma 5, instead of the last line:
+
+```sh
+plasmapkg2 --type kwinscript -i .
+```
+
+Then you might need to restart kwin. Do this by either logging out and back in, or by running `kwin_wayland --replace` in krunner.
 
 ### Upgrade
 
 If updating, change the `plasmapkg2`/`kpackagetool6` command above to the following:
 
 ``` bash
-# plasma 5
-plasmapkg2 --type kwinscript -u .
 # plasma 6
 kpackagetool6 --type KWin/Script --upgrade .
+# plasma 5
+plasmapkg2 --type kwinscript -u .
 ```
 
 ## Known issues

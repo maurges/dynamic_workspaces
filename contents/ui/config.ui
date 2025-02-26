@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>KWin::DynamicWorkspacesConfigForm</class>
+ <widget class="QWidget" name="KWin::DynamicWorkspacesConfigForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>200</width>
+    <height>100</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dynamic Workspaces</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+      <widget class="QCheckBox" name="kcfg_keepEmptyMiddleDesktops">
+        <property name="text">
+          <string>Keep empty desktops between occupied ones</string>
+        </property>
+      </widget>
+    </item>
+  </layout>
+ </widget>
+ <resources/>
+ </ui>

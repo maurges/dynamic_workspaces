@@ -19,4 +19,5 @@
 
 , "X-KDE-Library": "kwin/effects/configs/kcm_kwin4_genericscripted"
 , "X-Plasma-MainScript": "code/main.js"
+, "X-KDE-ConfigModule": "kwin/effects/configs/kcm_kwin4_genericscripted"
 }

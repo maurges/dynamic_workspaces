@@ -237,6 +237,8 @@ function onDesktopSwitch(oldDesktop)
 	const allDesktops = compat.workspaceDesktops();
 	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktop));
 	const currentDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(workspace.currentDesktop));
+	const getDesktopsLength = () => compat.workspaceDesktops().length;
+	const keepEmptyMiddleDesktops = readConfig("keepEmptyMiddleDesktops", false);
 
 	if (oldDesktopIndex <= currentDesktopIndex)
 	{
@@ -244,25 +246,22 @@ function onDesktopSwitch(oldDesktop)
 		return;
 	}
 
-	// start from next desktop to the right
-	let desktopIdx = currentDesktopIndex + 1;
-
-	// prevent infinite loop in case of an error - only try as many times as there are desktops.
-	// Might save us if other plugins interfere with workspace creation/deletion
-	let loopCounter = 0;
-	const getDesktopsLength = () => compat.workspaceDesktops().length;
-	for (; desktopIdx < getDesktopsLength() && loopCounter < getDesktopsLength(); ++desktopIdx)
+	// Loop through desktops right-to-left and delete empty ones:
+	// - Starts from second-to-last desktop (preserving always one empty desktop at the end)
+	// - Stops before reaching current desktop (preserves what user is viewing)
+	// - Extra check (desktopIdx > 0) prevents an infinite loop caused by abnormal conditions
+	//   In case of interference with other plugins, we'll only examine as many desktops as we initially detect
+	for (let desktopIdx = getDesktopsLength() - 2; desktopIdx > currentDesktopIndex && desktopIdx > 0; --desktopIdx)
 	{
 		debug(`Examine desktop ${desktopIdx}`);
-		loopCounter += 1;
 		if (isEmptyDesktop(desktopIdx))
 		{
-			const success = removeDesktop(desktopIdx);
-			if (success)
-			{
-				// we removed a desktop so we need to reduce our counter also
-				desktopIdx -= 1;
-			}
+			removeDesktop(desktopIdx);
+		}
+		else if (keepEmptyMiddleDesktops)
+		{
+			debug("Found non-empty desktop, stopping purge");
+			break;
 		}
 	}
 }

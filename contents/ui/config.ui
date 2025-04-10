@@ -21,6 +21,24 @@
         </property>
       </widget>
     </item>
+    <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+          <widget class="QLabel" name="minDesktopsLabel">
+            <property name="text">
+              <string>Minimal number of desktops:</string>
+            </property>
+            <property name="buddy">
+              <cstring>kcfg_minDesktops</cstring>
+            </property>
+          </widget>
+        </item>
+        <item>
+          <widget class="QSpinBox" name="kcfg_minDesktops">
+          </widget>
+        </item>
+      </layout>
+    </item>
   </layout>
  </widget>
  <resources/>

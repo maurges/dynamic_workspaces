@@ -109,22 +109,25 @@ function shiftRighterThan(client, number)
 	const allDesktops = compat.workspaceDesktops();
 	const clientDesktops = compat.clientDesktops(client);
 	let newDesktops = [];
-	// first add unchanged desktops
-	for (let i = 0; i < number; ++i)
+	// we assume the desktop in both lists are sorted
+
+	let i = 0;
+	for (const d of clientDesktops)
 	{
-		const d = allDesktops[i];
-		if (compat.findDesktop(clientDesktops, d) !== -1)
+		// page through all desktops until we find the current one
+		while (d != allDesktops[i])
+		{
+			i += 1;
+			if (i > allDesktops.length)  throw new Error("Did the behaviour of equality change?");
+		};
+		// push either current, or the one before it
+		if (i < number || i == 0)
 		{
 			newDesktops.push(d);
 		}
-	}
-	// then for every desktop after `number`, add a desktop before that
-	for (let i = number; i < allDesktops.length; ++i)
-	{
-		const d = allDesktops[i];
-		if (compat.findDesktop(clientDesktops, d) !== -1)
+		else
 		{
-			newDesktops.push(allDesktops[i-1]);
+			newDesktops.push(allDesktops[i - 1]);
 		}
 	}
 

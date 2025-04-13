@@ -15,6 +15,12 @@ function debug(...args) { if (LOG_LEVEL <= 1)  log(...args); }
 function trace(...args) { if (LOG_LEVEL <= 0)  log(...args); }
 
 
+// In plasma 6 simply removing a desktop breaks the desktop switching
+// animation. We use a workaround with emitting more switches at the right time
+// to force the animation to play
+let animationFixup = false;
+
+
 /*****  Plasma 5/6 differences  *****/
 
 
@@ -32,8 +38,27 @@ const compat = isKde6
 		, lastDesktop = () => workspace.desktops[workspace.desktops.length - 1]
 		, deleteLastDesktop = () =>
 			{
-				const last = workspace.desktops[workspace.desktops.length - 1];
-				workspace.removeDesktop(last);
+				try
+				{
+					animationFixup = true;
+
+					const last = workspace.desktops[workspace.desktops.length - 1];
+					// replay the animation by switching again
+					const current = workspace.currentDesktop;
+					const index = workspace.desktops.indexOf(current);
+					// in any weird corner case switch to current desktop
+					const target = index + 1 < workspace.desktops.length || index === -1
+						? workspace.desktops[index + 1]
+						: current;
+
+					workspace.currentDesktop = target;
+					workspace.removeDesktop(last);
+					workspace.currentDesktop = current;
+				}
+				finally
+				{
+					animationFixup = false;
+				}
 			}
 		, findDesktop = (ds, d) => ds.indexOf(d)
 
@@ -109,22 +134,25 @@ function shiftRighterThan(client, number)
 	const allDesktops = compat.workspaceDesktops();
 	const clientDesktops = compat.clientDesktops(client);
 	let newDesktops = [];
-	// first add unchanged desktops
-	for (let i = 0; i < number; ++i)
+	// we assume the desktop in both lists are sorted
+
+	let i = 0;
+	for (const d of clientDesktops)
 	{
-		const d = allDesktops[i];
-		if (compat.findDesktop(clientDesktops, d) !== -1)
+		// page through all desktops until we find the current one
+		while (d != allDesktops[i])
+		{
+			i += 1;
+			if (i > allDesktops.length)  throw new Error("Did the behaviour of equality change?");
+		};
+		// push either current, or the one before it
+		if (i < number || i === 0)
 		{
 			newDesktops.push(d);
 		}
-	}
-	// then for every desktop after `number`, add a desktop before that
-	for (let i = number; i < allDesktops.length; ++i)
-	{
-		const d = allDesktops[i];
-		if (compat.findDesktop(clientDesktops, d) !== -1)
+		else
 		{
-			newDesktops.push(allDesktops[i-1]);
+			newDesktops.push(allDesktops[i - 1]);
 		}
 	}
 
@@ -233,6 +261,8 @@ function onClientAdded(client)
 function onDesktopSwitch(oldDesktop)
 {
 	trace(`onDesktopSwitch(${oldDesktop})`);
+
+	if (animationFixup)  return;
 
 	const allDesktops = compat.workspaceDesktops();
 	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktop));

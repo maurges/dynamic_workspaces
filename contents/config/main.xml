@@ -9,6 +9,11 @@
     <entry name="keepEmptyMiddleDesktops" type="Bool">
       <default>false</default>
     </entry>
+    <entry name="minDesktops" type="UInt">
+      <default>2</default>
+      <min>2</min> <!-- One occupied desktop plus one empty dynamic desktop at the end -->
+      <max>20</max> <!-- KDE Plasma has a built-in limit of 20 virtual desktops -->
+    </entry>
   </group>
 
 </kcfg>

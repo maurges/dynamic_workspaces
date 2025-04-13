@@ -6,7 +6,8 @@
 // Desktop numbers are from zero (unlike how it worked in plasma 5)
 
 
-const MIN_DESKTOPS = 2;
+const MIN_DESKTOPS = readConfig("minDesktops", 2);
+const KEEP_EMPTY_MIDDLE_DESKTOPS = readConfig("keepEmptyMiddleDesktops", false);
 const LOG_LEVEL = 2; // 0 trace, 1 debug, 2 info
 
 
@@ -268,7 +269,6 @@ function onDesktopSwitch(oldDesktop)
 	const oldDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(oldDesktop));
 	const currentDesktopIndex = compat.findDesktop(allDesktops, compat.toDesktop(workspace.currentDesktop));
 	const getDesktopsLength = () => compat.workspaceDesktops().length;
-	const keepEmptyMiddleDesktops = readConfig("keepEmptyMiddleDesktops", false);
 
 	if (oldDesktopIndex <= currentDesktopIndex)
 	{
@@ -276,19 +276,28 @@ function onDesktopSwitch(oldDesktop)
 		return;
 	}
 
+	// Calculate the index of the last desktop we want to preserve when cleaning up.
+	// We need to preserve:
+	//   1. The current desktop (currentDesktopIndex)
+	//   2. At least MIN_DESKTOPS. Note we actually subtract two because:
+	//      - We always have the dynamic empty desktop at the end 
+	//      - MIN_DESKTOPS is a count, but we need an index
+	const preserveUpToIndex = Math.max(currentDesktopIndex, MIN_DESKTOPS - 2);
+	
 	// Loop through desktops right-to-left and delete empty ones:
 	// - Starts from second-to-last desktop (preserving always one empty desktop at the end)
 	// - Stops before reaching current desktop (preserves what user is viewing)
-	// - Extra check (desktopIdx > 0) prevents an infinite loop caused by abnormal conditions
-	//   In case of interference with other plugins, we'll only examine as many desktops as we initially detect
-	for (let desktopIdx = getDesktopsLength() - 2; desktopIdx > currentDesktopIndex && desktopIdx > 0; --desktopIdx)
+	// - Stops before reaching minimum number of desktops
+	// To prevent an infinite loop caused by abnormal conditions (e.g. interference with other plugins),
+	// we only examine as many desktops as we initially detect.
+	for (let desktopIdx = getDesktopsLength() - 2; desktopIdx > preserveUpToIndex; --desktopIdx)
 	{
 		debug(`Examine desktop ${desktopIdx}`);
 		if (isEmptyDesktop(desktopIdx))
 		{
 			removeDesktop(desktopIdx);
 		}
-		else if (keepEmptyMiddleDesktops)
+		else if (KEEP_EMPTY_MIDDLE_DESKTOPS)
 		{
 			debug("Found non-empty desktop, stopping purge");
 			break;

@@ -10,7 +10,7 @@
     , "Id": "dynamic_workspaces"
     , "License": "BSD"
     , "Name": "Dynamic Workspaces"
-    , "Version": "3.0.0"
+    , "Version": "3.1.0"
     }
 , "X-KDE-PluginKeyword": "workspaces"
 

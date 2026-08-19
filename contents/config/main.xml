@@ -9,6 +9,9 @@
     <entry name="keepEmptyMiddleDesktops" type="Bool">
       <default>false</default>
     </entry>
+    <entry name="keepMinDesktops" type="Int">
+      <default>2</default>
+    </entry>
   </group>
 
 </kcfg>

@@ -10,12 +10,12 @@
     , "Id": "dynamic_workspaces"
     , "License": "BSD"
     , "Name": "Dynamic Workspaces"
-    , "Version": "3.2.0"
+    , "Version": "3.3.0"
     }
 , "X-KDE-PluginKeyword": "workspaces"
 
 , "X-Plasma-API": "javascript"
-, "X-Plasma-API-Minimum-Version": "6.0"
+, "X-Plasma-API-Minimum-Version": "5.0"
 
 , "X-KDE-Library": "kwin/effects/configs/kcm_kwin4_genericscripted"
 , "X-Plasma-MainScript": "code/main.js"

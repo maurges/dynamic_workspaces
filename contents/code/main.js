@@ -281,7 +281,7 @@ function onDesktopSwitch(oldDesktop)
 	// - Stops before reaching current desktop (preserves what user is viewing)
 	// - Extra check (desktopIdx > 0) prevents an infinite loop caused by abnormal conditions
 	//   In case of interference with other plugins, we'll only examine as many desktops as we initially detect
-	for (let desktopIdx = getDesktopsLength() - 2; desktopIdx > currentDesktopIndex && desktopIdx > 0; --desktopIdx)
+	for (let desktopIdx = getDesktopsLength() - readConfig("keepMinDesktops", 2); desktopIdx > currentDesktopIndex && desktopIdx > 0; --desktopIdx)
 	{
 		debug(`Examine desktop ${desktopIdx}`);
 		if (isEmptyDesktop(desktopIdx))

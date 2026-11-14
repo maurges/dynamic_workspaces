@@ -28,7 +28,7 @@ const isKde6 = typeof workspace.windowList === "function";
 const compat = isKde6
 	?
 		{ addDesktop = () =>
-			{ workspace.createDesktop(workspace.desktops.length, undefined); }
+			{ workspace.createDesktop(workspace.desktops.length, ""); }
 		, windowAddedSignal = ws => ws.windowAdded
 		, windowList = ws => ws.windowList()
 		, desktopChangedSignal = c => c.desktopsChanged

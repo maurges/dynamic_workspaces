@@ -1,0 +1,146 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      ARCHIVE: dynamic_workspaces.tar.gz
+      RELEASE_TAG: ${{ github.ref_name }}
+      OPENDESKTOP_USERNAME: ${{ secrets.OPENDESKTOP_USERNAME }}
+      OPENDESKTOP_PASSWORD: ${{ secrets.OPENDESKTOP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make "$ARCHIVE"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1
+          then
+            gh release upload "$RELEASE_TAG" "$ARCHIVE" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$ARCHIVE" --generate-notes
+          fi
+
+      - name: Upload to opendesktop
+        run: |
+          set -euo pipefail
+          : "${OPENDESKTOP_USERNAME:?missing OPENDESKTOP_USERNAME}"
+          : "${OPENDESKTOP_PASSWORD:?missing OPENDESKTOP_PASSWORD}"
+
+          projectId=1312691
+          baseUrl=https://www.opendesktop.org
+          tmpDir=$(mktemp -d)
+          trap 'rm -rf "$tmpDir"' EXIT
+          cookieJar="$tmpDir/cookies"
+          touch "$cookieJar"
+          printf '%s' "$OPENDESKTOP_PASSWORD" > "$tmpDir/password"
+
+          fetch()
+          {
+            curl --fail --silent --show-error \
+              --user-agent dynamic-workspaces-release \
+              --cookie 'verified=1' \
+              --cookie "$cookieJar" \
+              --cookie-jar "$cookieJar" \
+              "$@"
+          }
+
+          attr()
+          {
+            sed -n "s/.*$1=\"\([^\"]*\)\".*/\1/p" "$2"
+          }
+
+          js()
+          {
+            sed -n "s/.*var $1 = '\([^']*\)'.*/\1/p" "$2"
+          }
+
+          resolveUrl()
+          {
+            local value=${1//@@project_id@@/$projectId}
+            if [[ $value == http* ]]
+            then
+              printf '%s' "$value"
+            else
+              printf '%s/%s' "${baseUrl%/}" "${value#/}"
+            fi
+          }
+
+          # /*****  Login  *****/
+
+          fetch "$baseUrl/login/" > "$tmpDir/login.html"
+          csrf=$(sed -n 's/.*name="csrf" value="\([^"]*\)".*/\1/p' "$tmpDir/login.html")
+          [[ -n $csrf ]]
+          fetch \
+            --data-urlencode "csrf=$csrf" \
+            --data-urlencode "email=$OPENDESKTOP_USERNAME" \
+            --data-urlencode "password@$tmpDir/password" \
+            "$baseUrl/login/" > "$tmpDir/auth.html"
+          if grep -qi 'incorrect login' "$tmpDir/auth.html"
+          then
+            echo 'opendesktop rejected the credentials' >&2
+            exit 1
+          fi
+
+          # /*****  Upload context  *****/
+
+          fetch "$baseUrl/p/$projectId/edit" > "$tmpDir/edit.html"
+          addUrl=$(attr data-addpploadfile-uri "$tmpDir/edit.html")
+          updateUrl=$(attr data-updatepploadfile-uri "$tmpDir/edit.html")
+          collectionId=$(attr data-ppload-collection-id "$tmpDir/edit.html")
+          clientId=$(js client_id "$tmpDir/edit.html")
+          fileUri=$(js fileUri "$tmpDir/edit.html")
+          ownerId=$(sed -n "s/.*form.append('owner_id', '\([^']*\)').*/\1/p" "$tmpDir/edit.html")
+          for value in "$addUrl" "$updateUrl" "$collectionId" "$clientId" "$fileUri" "$ownerId"
+          do
+            if [[ -z $value ]]
+            then
+              echo 'Could not read the opendesktop upload form' >&2
+              exit 1
+            fi
+          done
+
+          # /*****  Upload file  *****/
+
+          fetch \
+            -F "client_id=$clientId" \
+            -F "owner_id=$ownerId" \
+            -F 'format=json' \
+            -F "collection_id=$collectionId" \
+            -F 'method=post' \
+            -F "file=@$ARCHIVE;type=application/gzip" \
+            "$(resolveUrl "$fileUri")" > "$tmpDir/upload.json"
+          jq -e '.status == "success" and (.file | type == "object")' "$tmpDir/upload.json" >/dev/null
+
+          # /*****  Register file  *****/
+
+          mapfile -t fileFields < <(jq -r '.file | to_entries[] | "\(.key)=\(.value | tostring)"' "$tmpDir/upload.json")
+          registerArgs=()
+          for field in "${fileFields[@]}"
+          do
+            registerArgs+=(--data-urlencode "$field")
+          done
+          fetch \
+            -H 'X-Requested-With: XMLHttpRequest' \
+            -H 'Accept: application/json' \
+            "${registerArgs[@]}" \
+            "$(resolveUrl "$addUrl")" > "$tmpDir/register.json"
+          jq -e '.status == "ok" and (.file | type == "object")' "$tmpDir/register.json" >/dev/null
+          fileId=$(jq -er '.file.id | tostring' "$tmpDir/register.json")
+
+          # /*****  Set version  *****/
+
+          fetch \
+            -H 'X-Requested-With: XMLHttpRequest' \
+            -H 'Accept: application/json' \
+            --data-urlencode "file_id=$fileId" \
+            --data-urlencode "file_version=${RELEASE_TAG#v}" \
+            "$(resolveUrl "$updateUrl")" | jq -e '.status == "ok"' >/dev/null
